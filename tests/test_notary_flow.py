@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from app.api import create_app
 
@@ -9,8 +9,8 @@ from app.api import create_app
 @pytest.mark.asyncio
 async def test_notary_summarize_flow_mock_llm() -> None:
     app = create_app()
-
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         payload = {
             "text": "Dit is een voorbeeldakte.",
             "language": "nl",
