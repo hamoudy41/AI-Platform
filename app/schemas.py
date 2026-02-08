@@ -44,6 +44,33 @@ class NotarySummarizeResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ClassifyRequest(BaseModel):
+    text: str
+    candidate_labels: list[str] = Field(
+        default_factory=lambda: ["contract", "letter", "invoice", "report", "other"],
+    )
+
+
+class ClassifyResponse(BaseModel):
+    label: str
+    confidence: float
+    model: str
+    source: Literal["llm", "fallback"]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AskRequest(BaseModel):
+    question: str
+    context: str
+
+
+class AskResponse(BaseModel):
+    answer: str
+    model: str
+    source: Literal["llm", "fallback"]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class HealthStatus(BaseModel):
     status: Literal["ok"] = "ok"
     environment: str

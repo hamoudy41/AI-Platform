@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -25,69 +26,131 @@ class LLMResult:
     used_fallback: bool = False
 
 
+def _get_retries() -> int:
+    return max(1, get_settings().llm_max_retries)
+
+
 class LLMClient:
     def __init__(self) -> None:
         self._settings = get_settings()
 
-    async def generate_notary_summary(self, prompt: str, *, tenant_id: str) -> LLMResult:
-        if not self._settings.llm_base_url:
-            logger.info(
-                "llm.mock_notary_summary",
-                tenant_id=tenant_id,
-            )
+    def _use_real_backend(self) -> bool:
+        return bool(self._settings.llm_base_url and self._settings.llm_provider)
+
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        system_prompt: Optional[str] = None,
+        tenant_id: str = "default",
+    ) -> LLMResult:
+        if not self._use_real_backend():
+            logger.info("llm.mock_complete", tenant_id=tenant_id)
             return LLMResult(
-                raw_text="Summary of the notarial document.",
+                raw_text="[mock response]",
                 model="mock",
-                latency_ms=5.0,
+                latency_ms=1.0,
                 used_fallback=False,
             )
+        if self._settings.llm_provider == "ollama":
+            return await self._complete_ollama(prompt, system_prompt=system_prompt)
+        return await self._complete_openai(prompt, system_prompt=system_prompt)
 
-        return await self._call_llm(
-            path="/notary/summarize",
-            json={"prompt": prompt, "tenant_id": tenant_id},
+    @retry(
+        wait=wait_exponential(min=1, max=10),
+        stop=stop_after_attempt(_get_retries()),
+        reraise=True,
+    )
+    async def _complete_ollama(
+        self,
+        prompt: str,
+        *,
+        system_prompt: Optional[str] = None,
+    ) -> LLMResult:
+        base = str(self._settings.llm_base_url).rstrip("/")
+        url = f"{base}/api/generate"
+        payload: dict[str, Any] = {
+            "model": self._settings.llm_model,
+            "prompt": prompt,
+            "stream": False,
+        }
+        if system_prompt:
+            payload["system"] = system_prompt
+        started = time.perf_counter()
+        async with httpx.AsyncClient(timeout=self._settings.llm_timeout_seconds) as client:
+            try:
+                r = await client.post(url, json=payload)
+            except httpx.RequestError as e:
+                logger.warning("llm.ollama_error", error=str(e))
+                raise LLMError("Ollama request failed") from e
+        if r.status_code != 200:
+            raise LLMError(f"Ollama returned {r.status_code}: {r.text[:500]}")
+        data = r.json()
+        text = data.get("response") or data.get("text") or ""
+        if not isinstance(text, str) or not text.strip():
+            raise LLMError("Ollama returned empty response")
+        latency_ms = (time.perf_counter() - started) * 1000
+        return LLMResult(
+            raw_text=text.strip(),
+            model=data.get("model", self._settings.llm_model),
+            latency_ms=round(latency_ms, 2),
         )
 
-    @retry(wait=wait_exponential(min=0.5, max=5), stop=stop_after_attempt(get_settings().llm_max_retries))
-    async def _call_llm(self, path: str, json: Mapping[str, Any]) -> LLMResult:
-        assert self._settings.llm_base_url is not None, "llm_base_url must be configured"
-
-        url = f"{self._settings.llm_base_url}{path}"
-        timeout = self._settings.llm_timeout_seconds
-
-        logger.info("llm.request", url=url, timeout=timeout)
-
-        async with httpx.AsyncClient(timeout=timeout) as client:
+    @retry(
+        wait=wait_exponential(min=1, max=10),
+        stop=stop_after_attempt(_get_retries()),
+        reraise=True,
+    )
+    async def _complete_openai(
+        self,
+        prompt: str,
+        *,
+        system_prompt: Optional[str] = None,
+    ) -> LLMResult:
+        base = str(self._settings.llm_base_url).rstrip("/")
+        url = f"{base}/v1/chat/completions"
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        payload: dict[str, Any] = {
+            "model": self._settings.llm_model,
+            "messages": messages,
+            "max_tokens": 2048,
+        }
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if self._settings.llm_api_key:
+            headers["Authorization"] = f"Bearer {self._settings.llm_api_key}"
+        started = time.perf_counter()
+        async with httpx.AsyncClient(timeout=self._settings.llm_timeout_seconds) as client:
             try:
-                response = await client.post(
-                    url,
-                    json=json,
-                    headers={"Authorization": f"Bearer {self._settings.llm_api_key or ''}"},
-                )
-            except httpx.RequestError as exc:
-                logger.warning("llm.transport_error", error=str(exc))
-                raise LLMError("LLM transport error") from exc
-
-        if response.status_code != 200:
-            logger.warning("llm.bad_status", status=response.status_code, body=response.text)
-            raise LLMError(f"LLM returned HTTP {response.status_code}")
-
-        data: Optional[dict[str, Any]] = None
-        try:
-            data = response.json()
-        except ValueError as exc:
-            logger.warning("llm.invalid_json", body=response.text)
-            raise LLMError("LLM returned invalid JSON") from exc
-
-        text = data.get("text")
-        model = data.get("model", "unknown")
-        latency_ms = float(data.get("latency_ms", 0.0))
-
+                r = await client.post(url, json=payload, headers=headers)
+            except httpx.RequestError as e:
+                logger.warning("llm.openai_error", error=str(e))
+                raise LLMError("OpenAI-compatible request failed") from e
+        if r.status_code != 200:
+            raise LLMError(f"OpenAI-compatible returned {r.status_code}: {r.text[:500]}")
+        data = r.json()
+        choices = data.get("choices") or []
+        if not choices:
+            raise LLMError("OpenAI-compatible returned no choices")
+        msg = choices[0].get("message") or {}
+        text = msg.get("content") or ""
         if not isinstance(text, str) or not text.strip():
-            logger.warning("llm.empty_text", data=data)
-            raise LLMError("LLM returned empty text")
+            raise LLMError("OpenAI-compatible returned empty content")
+        latency_ms = (time.perf_counter() - started) * 1000
+        return LLMResult(
+            raw_text=text.strip(),
+            model=data.get("model", self._settings.llm_model),
+            latency_ms=round(latency_ms, 2),
+        )
 
-        return LLMResult(raw_text=text, model=model, latency_ms=latency_ms)
+    async def generate_notary_summary(self, prompt: str, *, tenant_id: str) -> LLMResult:
+        return await self.complete(
+            prompt,
+            system_prompt="You are a concise assistant for notarial document summarization. Reply only with the summary, no preamble.",
+            tenant_id=tenant_id,
+        )
 
 
 llm_client = LLMClient()
-

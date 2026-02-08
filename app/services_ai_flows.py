@@ -8,7 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core.logging import get_logger
 from .models import AiCallAudit, Document
-from .schemas import NotarySummarizeRequest, NotarySummarizeResponse, NotarySummary
+from .schemas import (
+    AskRequest,
+    AskResponse,
+    ClassifyRequest,
+    ClassifyResponse,
+    NotarySummarizeRequest,
+    NotarySummarizeResponse,
+    NotarySummary,
+)
 from .services_llm import LLMError, llm_client
 
 
@@ -94,14 +102,179 @@ async def run_notary_summarization_flow(
         flow_name="notary_summarize",
         request_payload=payload.model_dump(),
         response_payload=response.model_dump(),
-        success=True,
+        success=source == "llm",
     )
     try:
         db.add(audit)
         await db.commit()
+        response.metadata["audit_persisted"] = True
     except Exception as exc:  # noqa: BLE001
-        logger.warning("ai_flow.audit_persist_failed", error=str(exc))
-        await db.rollback()
+        logger.warning("ai_flow.audit_persist_failed", flow="notary_summarize", error=str(exc))
+        try:
+            await db.rollback()
+        except Exception as rollback_exc:  # noqa: BLE001
+            logger.warning("ai_flow.rollback_failed", flow="notary_summarize", error=str(rollback_exc))
+        response.metadata["audit_persisted"] = False
 
     return response
+
+
+def _audit_flow(
+    db: AsyncSession,
+    tenant_id: str,
+    flow_name: str,
+    request_payload: dict[str, Any],
+    response_payload: dict[str, Any],
+    success: bool,
+) -> bool:
+    audit = AiCallAudit(
+        id=str(uuid.uuid4()),
+        tenant_id=tenant_id,
+        flow_name=flow_name,
+        request_payload=request_payload,
+        response_payload=response_payload,
+        success=success,
+    )
+    try:
+        db.add(audit)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai_flow.audit_persist_failed", flow=flow_name, error=str(exc))
+        return False
+
+
+async def run_classify_flow(
+    *,
+    tenant_id: str,
+    db: AsyncSession,
+    payload: ClassifyRequest,
+) -> ClassifyResponse:
+    if not payload.candidate_labels:
+        raise AiFlowError("candidate_labels cannot be empty")
+    labels_str = ", ".join(payload.candidate_labels)
+    prompt = (
+        f"Classify the following text into exactly one of these labels: {labels_str}. "
+        "Reply with only the single label word, nothing else.\n\nText:\n"
+        f"{payload.text[:4000]}"
+    )
+    source = "llm"
+    try:
+        result = await llm_client.complete(
+            prompt,
+            system_prompt="You are a classifier. Output only one word: the label.",
+            tenant_id=tenant_id,
+        )
+        raw = (result.raw_text or "").strip().lower()
+        first_word = raw.split()[0] if raw else "other"
+        labels_lower = [c.lower() for c in payload.candidate_labels]
+        if first_word in labels_lower:
+            idx = labels_lower.index(first_word)
+            label = payload.candidate_labels[idx]
+        else:
+            label = payload.candidate_labels[0]
+        out = ClassifyResponse(
+            label=label,
+            confidence=0.9,
+            model=result.model,
+            source=source,
+            metadata={"latency_ms": result.latency_ms},
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai_flow.classify_failed", error=str(exc))
+        source = "fallback"
+        fallback_label = payload.candidate_labels[0] if payload.candidate_labels else "other"
+        out = ClassifyResponse(
+            label=fallback_label,
+            confidence=0.0,
+            model="fallback",
+            source=source,
+            metadata={"fallback_reason": str(exc)},
+        )
+    audit_added = _audit_flow(
+        db,
+        tenant_id,
+        "classify",
+        payload.model_dump(),
+        out.model_dump(),
+        success=source == "llm",
+    )
+    if audit_added:
+        try:
+            await db.commit()
+            out.metadata["audit_persisted"] = True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ai_flow.audit_persist_failed", flow="classify", error=str(exc))
+            try:
+                await db.rollback()
+            except Exception as rollback_exc:  # noqa: BLE001
+                logger.warning("ai_flow.rollback_failed", flow="classify", error=str(rollback_exc))
+            out.metadata["audit_persisted"] = False
+    else:
+        try:
+            await db.rollback()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ai_flow.rollback_failed", flow="classify", error=str(exc))
+        out.metadata["audit_persisted"] = False
+    return out
+
+
+async def run_ask_flow(
+    *,
+    tenant_id: str,
+    db: AsyncSession,
+    payload: AskRequest,
+) -> AskResponse:
+    prompt = (
+        "Answer the question based only on the following context. "
+        "If the context does not contain the answer, say so briefly.\n\n"
+        f"Context:\n{payload.context[:8000]}\n\nQuestion: {payload.question}"
+    )
+    source = "llm"
+    try:
+        result = await llm_client.complete(
+            prompt,
+            system_prompt="You are a helpful assistant. Answer concisely based only on the given context.",
+            tenant_id=tenant_id,
+        )
+        out = AskResponse(
+            answer=result.raw_text,
+            model=result.model,
+            source=source,
+            metadata={"latency_ms": result.latency_ms},
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai_flow.ask_failed", error=str(exc))
+        source = "fallback"
+        out = AskResponse(
+            answer="Answer unavailable (model error).",
+            model="fallback",
+            source=source,
+            metadata={"fallback_reason": str(exc)},
+        )
+    audit_added = _audit_flow(
+        db,
+        tenant_id,
+        "ask",
+        payload.model_dump(),
+        out.model_dump(),
+        success=source == "llm",
+    )
+    if audit_added:
+        try:
+            await db.commit()
+            out.metadata["audit_persisted"] = True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ai_flow.audit_persist_failed", flow="ask", error=str(exc))
+            try:
+                await db.rollback()
+            except Exception as rollback_exc:  # noqa: BLE001
+                logger.warning("ai_flow.rollback_failed", flow="ask", error=str(rollback_exc))
+            out.metadata["audit_persisted"] = False
+    else:
+        try:
+            await db.rollback()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ai_flow.rollback_failed", flow="ask", error=str(exc))
+        out.metadata["audit_persisted"] = False
+    return out
 

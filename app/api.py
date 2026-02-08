@@ -13,13 +13,22 @@ from .core.logging import configure_logging, get_logger
 from .db import get_db_session, get_engine
 from .models import Base, Document
 from .schemas import (
+    AskRequest,
+    AskResponse,
+    ClassifyRequest,
+    ClassifyResponse,
     DocumentCreate,
     DocumentRead,
     HealthStatus,
     NotarySummarizeRequest,
     NotarySummarizeResponse,
 )
-from .services_ai_flows import AiFlowError, run_notary_summarization_flow
+from .services_ai_flows import (
+    AiFlowError,
+    run_ask_flow,
+    run_classify_flow,
+    run_notary_summarization_flow,
+)
 
 
 logger = get_logger(__name__)
@@ -131,6 +140,30 @@ def create_app() -> FastAPI:
             db=db,
             payload=payload,
         )
+
+    @api_router.post(
+        "/ai/classify",
+        response_model=ClassifyResponse,
+        status_code=status.HTTP_200_OK,
+    )
+    async def classify(
+        payload: ClassifyRequest,
+        tenant_id: str = Depends(get_tenant_id),
+        db: AsyncSession = Depends(get_db_session),
+    ) -> ClassifyResponse:
+        return await run_classify_flow(tenant_id=tenant_id, db=db, payload=payload)
+
+    @api_router.post(
+        "/ai/ask",
+        response_model=AskResponse,
+        status_code=status.HTTP_200_OK,
+    )
+    async def ask(
+        payload: AskRequest,
+        tenant_id: str = Depends(get_tenant_id),
+        db: AsyncSession = Depends(get_db_session),
+    ) -> AskResponse:
+        return await run_ask_flow(tenant_id=tenant_id, db=db, payload=payload)
 
     app.include_router(api_router)
     return app

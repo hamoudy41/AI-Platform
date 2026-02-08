@@ -12,9 +12,11 @@ class Settings(BaseSettings):
     default_tenant_id: str = "default"
     tenant_header_name: str = "X-Tenant-ID"
     database_url: str = "sqlite+aiosqlite:///./app.db"
+    llm_provider: Literal["ollama", "openai_compatible", ""] = ""
     llm_base_url: Optional[AnyHttpUrl] = None
     llm_api_key: Optional[str] = None
-    llm_timeout_seconds: float = 10.0
+    llm_model: str = "llama3.2"
+    llm_timeout_seconds: float = 60.0
     llm_max_retries: int = 2
     log_level: str = "INFO"
     enable_prometheus: bool = True
