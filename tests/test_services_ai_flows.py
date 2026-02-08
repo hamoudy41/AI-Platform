@@ -90,7 +90,7 @@ async def test_notary_document_id_but_doc_not_found_uses_payload_text(db_session
         mock_llm.generate_notary_summary = AsyncMock(
             return_value=LLMResult(raw_text="Summary.", model="mock", latency_ms=1.0),
         )
-        out = await run_notary_summarization_flow(
+        await run_notary_summarization_flow(
             tenant_id="tenant-1",
             db=db_session,
             payload=NotarySummarizeRequest(document_id="nonexistent-id", text="Fallback text.", language="en"),
