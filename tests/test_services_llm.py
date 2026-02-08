@@ -54,7 +54,11 @@ async def test_complete_ollama_success():
         m.return_value.llm_timeout_seconds = 30
         client = LLMClient()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_post = AsyncMock(return_value=_mock_response(200, {"response": "Classified as invoice.", "model": "llama3.2"}))
+            mock_post = AsyncMock(
+                return_value=_mock_response(
+                    200, {"response": "Classified as invoice.", "model": "llama3.2"}
+                )
+            )
             mock_client.return_value.__aenter__.return_value.post = mock_post
             out = await client.complete("Classify: invoice", tenant_id="t1")
             assert out.raw_text == "Classified as invoice."
@@ -70,7 +74,9 @@ async def test_complete_ollama_with_system_prompt():
         m.return_value.llm_timeout_seconds = 30
         client = LLMClient()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_post = AsyncMock(return_value=_mock_response(200, {"response": "ok", "model": "llama3.2"}))
+            mock_post = AsyncMock(
+                return_value=_mock_response(200, {"response": "ok", "model": "llama3.2"})
+            )
             mock_client.return_value.__aenter__.return_value.post = mock_post
             await client.complete("hi", system_prompt="You are helpful.", tenant_id="t1")
             call_kw = mock_post.call_args.kwargs
@@ -102,7 +108,9 @@ async def test_complete_ollama_empty_response_raises():
         m.return_value.llm_timeout_seconds = 30
         client = LLMClient()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_post = AsyncMock(return_value=_mock_response(200, {"response": "  ", "model": "x"}))
+            mock_post = AsyncMock(
+                return_value=_mock_response(200, {"response": "  ", "model": "x"})
+            )
             mock_client.return_value.__aenter__.return_value.post = mock_post
             with pytest.raises(Exception):
                 await client.complete("hi", tenant_id="t1")
@@ -118,10 +126,15 @@ async def test_complete_openai_success():
         m.return_value.llm_timeout_seconds = 30
         client = LLMClient()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_post = AsyncMock(return_value=_mock_response(200, {
-                "choices": [{"message": {"content": "The answer is 42."}}],
-                "model": "llama",
-            }))
+            mock_post = AsyncMock(
+                return_value=_mock_response(
+                    200,
+                    {
+                        "choices": [{"message": {"content": "The answer is 42."}}],
+                        "model": "llama",
+                    },
+                )
+            )
             mock_client.return_value.__aenter__.return_value.post = mock_post
             out = await client.complete("What is the answer?", tenant_id="t1")
             assert out.raw_text == "The answer is 42."
@@ -138,10 +151,15 @@ async def test_complete_openai_with_api_key():
         m.return_value.llm_timeout_seconds = 30
         client = LLMClient()
         with patch("httpx.AsyncClient") as mock_client:
-            mock_post = AsyncMock(return_value=_mock_response(200, {
-                "choices": [{"message": {"content": "Hi"}}],
-                "model": "llama",
-            }))
+            mock_post = AsyncMock(
+                return_value=_mock_response(
+                    200,
+                    {
+                        "choices": [{"message": {"content": "Hi"}}],
+                        "model": "llama",
+                    },
+                )
+            )
             mock_client.return_value.__aenter__.return_value.post = mock_post
             await client.complete("hi", tenant_id="t1")
             call_kw = mock_post.call_args.kwargs

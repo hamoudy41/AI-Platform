@@ -113,7 +113,9 @@ async def run_notary_summarization_flow(
         try:
             await db.rollback()
         except Exception as rollback_exc:  # noqa: BLE001
-            logger.warning("ai_flow.rollback_failed", flow="notary_summarize", error=str(rollback_exc))
+            logger.warning(
+                "ai_flow.rollback_failed", flow="notary_summarize", error=str(rollback_exc)
+            )
         response.metadata["audit_persisted"] = False
 
     return response
@@ -277,4 +279,3 @@ async def run_ask_flow(
             logger.warning("ai_flow.rollback_failed", flow="ask", error=str(exc))
         out.metadata["audit_persisted"] = False
     return out
-

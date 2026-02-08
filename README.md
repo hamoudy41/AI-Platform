@@ -44,3 +44,15 @@ uvicorn app.main:app --reload
 | GET  | `/api/v1/documents/{id}` | Get document by id |
 
 If the LLM is unavailable, notary summarization and classify/ask return safe fallbacks. Add more flows in `app/services_ai_flows.py` and use Alembic when you move off SQLite.
+
+**Code style (Ruff, like Spotless):**
+
+```bash
+# Check only (CI runs this)
+ruff check app tests
+ruff format --check app tests
+
+# Auto-fix and format (apply, run before commit)
+ruff check app tests --fix
+ruff format app tests
+```

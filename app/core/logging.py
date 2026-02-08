@@ -9,7 +9,9 @@ import structlog
 from .config import get_settings
 
 
-def _add_log_level(logger: Any, method_name: str, event_dict: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+def _add_log_level(
+    logger: Any, method_name: str, event_dict: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
     event_dict["level"] = method_name
     return event_dict
 

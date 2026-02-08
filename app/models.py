@@ -21,7 +21,9 @@ class Document(Base, TenantScopedMixin):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
     text: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
 
 class AiCallAudit(Base, TenantScopedMixin):
@@ -32,5 +34,6 @@ class AiCallAudit(Base, TenantScopedMixin):
     request_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     response_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     success: Mapped[bool] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )

@@ -75,4 +75,3 @@ class HealthStatus(BaseModel):
     status: Literal["ok"] = "ok"
     environment: str
     timestamp: datetime
-

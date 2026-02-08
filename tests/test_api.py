@@ -90,7 +90,10 @@ async def test_classify(client, tenant_headers):
     r = await client.post(
         "/api/v1/ai/classify",
         headers=tenant_headers,
-        json={"text": "This is an invoice for 100 euros.", "candidate_labels": ["invoice", "letter", "contract"]},
+        json={
+            "text": "This is an invoice for 100 euros.",
+            "candidate_labels": ["invoice", "letter", "contract"],
+        },
     )
     assert r.status_code == 200
     data = r.json()

@@ -27,4 +27,3 @@ async def test_notary_summarize_flow_mock_llm() -> None:
     assert "summary" in data
     assert "title" in data["summary"]
     assert isinstance(data["summary"]["key_points"], list)
-

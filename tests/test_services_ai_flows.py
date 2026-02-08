@@ -23,6 +23,7 @@ from app.services_llm import LLMError, LLMResult
 @pytest.fixture
 async def db_session():
     from app.models import Base
+
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -81,7 +82,10 @@ async def test_notary_flow_fallback_when_llm_raises(db_session):
             payload=NotarySummarizeRequest(text="Some text.", language="en"),
         )
         assert out.source == "fallback"
-        assert "Automatische samenvatting" in out.summary.raw_summary or "niet beschikbaar" in out.summary.raw_summary
+        assert (
+            "Automatische samenvatting" in out.summary.raw_summary
+            or "niet beschikbaar" in out.summary.raw_summary
+        )
 
 
 @pytest.mark.asyncio
@@ -93,7 +97,9 @@ async def test_notary_document_id_but_doc_not_found_uses_payload_text(db_session
         await run_notary_summarization_flow(
             tenant_id="tenant-1",
             db=db_session,
-            payload=NotarySummarizeRequest(document_id="nonexistent-id", text="Fallback text.", language="en"),
+            payload=NotarySummarizeRequest(
+                document_id="nonexistent-id", text="Fallback text.", language="en"
+            ),
         )
         call_args = mock_llm.generate_notary_summary.call_args
         assert "Fallback text" in call_args[0][0]
@@ -108,7 +114,9 @@ async def test_classify_label_matching(db_session):
         out = await run_classify_flow(
             tenant_id="t1",
             db=db_session,
-            payload=ClassifyRequest(text="Invoice for 100 EUR.", candidate_labels=["contract", "invoice", "letter"]),
+            payload=ClassifyRequest(
+                text="Invoice for 100 EUR.", candidate_labels=["contract", "invoice", "letter"]
+            ),
         )
         assert out.label == "invoice"
         assert out.source == "llm"
