@@ -5,10 +5,12 @@ from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request, status
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, Response
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core.config import get_settings
+from .core.metrics import REQUEST_COUNT, REQUEST_LATENCY, get_metrics, metrics_content_type
 from .core.logging import configure_logging, get_logger
 from .db import get_db_session, get_engine
 from .models import Base, Document
@@ -58,6 +60,43 @@ def create_app() -> FastAPI:
 
     app.router.lifespan_context = lifespan
 
+    if settings.enable_prometheus:
+
+        @app.middleware("http")
+        async def metrics_middleware(request: Request, call_next):
+            import time
+
+            start = time.perf_counter()
+            response = await call_next(request)
+            elapsed = time.perf_counter() - start
+            path = request.scope.get("path", "")
+            method = request.method
+            REQUEST_LATENCY.labels(method=method, path=path).observe(elapsed)
+            REQUEST_COUNT.labels(method=method, path=path, status=response.status_code).inc()
+            return response
+
+    if settings.api_key:
+        _no_auth_paths = {"/metrics", f"{settings.api_v1_prefix}/health"}
+
+        @app.middleware("http")
+        async def api_key_middleware(request: Request, call_next):
+            if request.url.path in _no_auth_paths:
+                return await call_next(request)
+            if request.url.path.startswith(f"{settings.api_v1_prefix}/"):
+                key = request.headers.get("X-API-Key")
+                if key != settings.api_key:
+                    return ORJSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "Invalid or missing API key"},
+                    )
+            return await call_next(request)
+
+    if settings.enable_prometheus:
+
+        @app.get("/metrics", include_in_schema=False)
+        async def metrics() -> Response:
+            return Response(content=get_metrics(), media_type=metrics_content_type())
+
     @app.exception_handler(AiFlowError)
     async def ai_flow_error_handler(_: Request, exc: AiFlowError) -> ORJSONResponse:
         return ORJSONResponse(
@@ -81,10 +120,18 @@ def create_app() -> FastAPI:
         return x_tenant_id or settings.default_tenant_id
 
     @api_router.get("/health", response_model=HealthStatus)
-    async def health() -> HealthStatus:
+    async def health(db: AsyncSession = Depends(get_db_session)) -> HealthStatus:
+        db_ok: bool | None = None
+        try:
+            await db.execute(text("SELECT 1"))
+            db_ok = True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("health.db_check_failed", error=str(exc))
+            db_ok = False
         return HealthStatus(
             environment=settings.environment,
             timestamp=datetime.now(timezone.utc),
+            db_ok=db_ok,
         )
 
     @api_router.post("/documents", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)

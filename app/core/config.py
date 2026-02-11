@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     llm_max_retries: int = 2
     log_level: str = "INFO"
     enable_prometheus: bool = True
+    api_key: Optional[str] = None  # when set, require X-API-Key header
 
     class Config:
         env_file = ".env"

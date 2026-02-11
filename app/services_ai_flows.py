@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core.logging import get_logger
+from .core.metrics import LLM_CALLS
 from .models import AiCallAudit, Document
 from .schemas import (
     AskRequest,
@@ -65,6 +66,7 @@ async def run_notary_summarization_flow(
         llm_result = await llm_client.generate_notary_summary(prompt, tenant_id=tenant_id)
         raw_summary = llm_result.raw_text
         source = "llm"
+        LLM_CALLS.labels(flow="notary_summarize", source="llm").inc()
         metadata.update(
             {
                 "model": llm_result.model,
@@ -74,6 +76,7 @@ async def run_notary_summarization_flow(
     except (LLMError, Exception) as exc:  # noqa: BLE001
         logger.warning("ai_flow.notary_summarize_llm_failed", error=str(exc))
         source = "fallback"
+        LLM_CALLS.labels(flow="notary_summarize", source="fallback").inc()
         raw_summary = (
             "Automatische samenvatting niet beschikbaar. "
             "Dit is een veilige, generieke samenvatting op basis van de aangeleverde tekst. "
@@ -174,6 +177,7 @@ async def run_classify_flow(
             label = payload.candidate_labels[idx]
         else:
             label = payload.candidate_labels[0]
+        LLM_CALLS.labels(flow="classify", source="llm").inc()
         out = ClassifyResponse(
             label=label,
             confidence=0.9,
@@ -184,6 +188,7 @@ async def run_classify_flow(
     except Exception as exc:  # noqa: BLE001
         logger.warning("ai_flow.classify_failed", error=str(exc))
         source = "fallback"
+        LLM_CALLS.labels(flow="classify", source="fallback").inc()
         fallback_label = payload.candidate_labels[0] if payload.candidate_labels else "other"
         out = ClassifyResponse(
             label=fallback_label,
@@ -247,6 +252,7 @@ async def run_ask_flow(
     except Exception as exc:  # noqa: BLE001
         logger.warning("ai_flow.ask_failed", error=str(exc))
         source = "fallback"
+        LLM_CALLS.labels(flow="ask", source="fallback").inc()
         out = AskResponse(
             answer="Answer unavailable (model error).",
             model="fallback",

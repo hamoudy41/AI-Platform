@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-platform-config
+data:
+  DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/aiplatform"
+  API_V1_PREFIX: "/api/v1"
+  ENVIRONMENT: "prod"
+  ENABLE_PROMETHEUS: "true"
