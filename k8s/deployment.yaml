@@ -14,6 +14,10 @@ spec:
       labels:
         app: ai-platform
     spec:
+      initContainers:
+        - name: wait-for-db
+          image: postgres:16-alpine
+          command: ["sh", "-c", "until pg_isready -h postgres -U postgres; do sleep 2; done"]
       containers:
         - name: ai-platform
           image: ghcr.io/hamoudy41/ai-platform:latest

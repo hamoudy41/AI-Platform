@@ -1,0 +1,7 @@
+# Apply all: kubectl apply -k k8s/
+resources:
+  - configmap.yaml
+  - postgres.yaml
+  - redis.yaml
+  - deployment.yaml
+  # - ingress.yaml  # uncomment if using ingress controller

@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+body {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #0f172a;
+  }
+}

@@ -3,7 +3,8 @@ kind: ConfigMap
 metadata:
   name: ai-platform-config
 data:
-  DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/aiplatform"
+  DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/aiplatform"
+  REDIS_URL: "redis://redis:6379/0"
   API_V1_PREFIX: "/api/v1"
   ENVIRONMENT: "prod"
   ENABLE_PROMETHEUS: "true"

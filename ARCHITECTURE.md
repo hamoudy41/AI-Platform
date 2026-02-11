@@ -1,45 +1,37 @@
 # Architecture
 
-## Overview
-
-Multi-tenant AI platform for regulated environments. Backend-first design with FastAPI, tenant isolation via `X-Tenant-ID`, and LLM integration (Ollama / OpenAI-compatible) with fallbacks.
+Monorepo: `api/` (FastAPI), `frontend/` (React). Multi-tenant with `X-Tenant-ID`; LLM via Ollama or OpenAI-compatible APIs.
 
 ## Stack
 
-| Layer      | Technology                                  |
-|-----------|---------------------------------------------|
-| API       | FastAPI                                     |
-| DB        | SQLite (dev) / PostgreSQL (prod)            |
-| ORM       | SQLAlchemy 2 (async)                        |
-| Migrations| Alembic                                    |
-| LLM       | Ollama, OpenAI-compatible (vLLM, LocalAI)   |
-| Auth      | Optional API key (`X-API-Key`)              |
-| Monitoring| Prometheus (`/metrics`)                      |
+| Layer      | Tech                                   |
+|------------|----------------------------------------|
+| API        | FastAPI                                |
+| DB         | SQLite / PostgreSQL                    |
+| ORM        | SQLAlchemy 2 (async)                   |
+| Migrations | Alembic                                |
+| LLM        | Ollama, OpenAI-compatible              |
+| Auth       | Optional `X-API-Key`                    |
+| Metrics    | Prometheus `/metrics`                  |
 
-## Multi-tenancy
+## Tenancy
 
-- **Tenant context**: `X-Tenant-ID` header (default: `default`)
-- **Data separation**: `tenant_id` on all tenant-scoped tables; queries filter by tenant
-- **Models**: `TenantScopedMixin` provides `tenant_id` column
+`X-Tenant-ID` header (default: `default`). `tenant_id` on all tenant tables; `TenantScopedMixin` for models.
 
 ## AI Flows
 
-1. **Notary summarize** – Document summarization with structured output
-2. **Classify** – Text classification into candidate labels
-3. **Ask** – Q&A from provided context
+Notary summarize, Classify, Ask. Each: LLM when configured, fallback otherwise; audits to `ai_call_audit`; retries + timeouts.
 
-Each flow:
-- Calls LLM when configured; returns mock/fallback when not
-- Audits to `ai_call_audit` (tenant, flow_name, success, payloads)
-- Uses retries (tenacity) and timeouts
+## Redis
 
-## Security
+`REDIS_URL`: rate limiting (120/min per tenant), document cache (5 min TTL).
 
-- **API key**: Set `API_KEY` in env to require `X-API-Key` on all API routes; `/metrics` and `/health` stay open
-- **Health**: Includes DB connectivity check (`db_ok`)
+## Frontend
+
+React + TypeScript, Tailwind. See `frontend/README.md`.
 
 ## Deployment
 
-- **Docker**: `docker build -t ai-platform .`
-- **Compose**: `docker-compose up` (app + Postgres + Redis)
-- **Kubernetes**: See `k8s/` (Deployment, Service, ConfigMap)
+- Docker: multi-stage (Node → Python); single image serves API + static frontend.
+- Compose: backend, Postgres, Redis.
+- K8s: `kubectl apply -k k8s/`

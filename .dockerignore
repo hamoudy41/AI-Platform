@@ -1,0 +1,22 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.coverage
+htmlcov
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+
+# Env
+.env
+.env.*
+*.local

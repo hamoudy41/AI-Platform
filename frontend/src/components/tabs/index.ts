@@ -1,0 +1,5 @@
+export { AskTab } from './AskTab'
+export { ClassifyTab } from './ClassifyTab'
+export { DocumentsTab } from './DocumentsTab'
+export { HealthTab } from './HealthTab'
+export { NotaryTab } from './NotaryTab'

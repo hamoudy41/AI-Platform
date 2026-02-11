@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-platform
+  annotations:
+    # Uncomment for nginx-ingress
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  # ingressClassName: nginx  # set as needed for your cluster
+  rules:
+    - host: localhost  # or your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-platform
+                port:
+                  number: 80
+  # Optional: TLS
+  # tls:
+  #   - hosts:
+  #       - ai-platform.local
+  #     secretName: ai-platform-tls
