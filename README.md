@@ -1,58 +1,35 @@
 # AI Platform
 
-Multi-tenant AI platform with FastAPI and Python. Uses `X-Tenant-ID` for tenant context, a single LLM client with timeouts/retries, and audit logging for AI calls. Supports **Ollama** (local open-source models) and **OpenAI-compatible** APIs (e.g. vLLM, LocalAI, OpenAI). SQLite by default; swap to Postgres via env.
+Multi-tenant AI platform with FastAPI. Uses `X-Tenant-ID` header for tenant context, audit logging for AI calls, and supports **Ollama** or **OpenAI-compatible** APIs (vLLM, LocalAI, OpenAI). SQLite by default; swap to Postgres via `DATABASE_URL`.
 
-**Run:**
+## Setup
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -e ".[dev]"
+cp .env.example .env   # edit .env for LLM backend
 uvicorn app.main:app --reload
 ```
 
-**Use real open-source models (Ollama):**
+`.env` configures the LLM backend (Ollama, OpenAI-compatible, or leave empty for mock). If no provider is set, endpoints return mock/fallback responses.
 
-1. Install [Ollama](https://ollama.com) and run a model, e.g. `ollama run llama3.2`
-2. Set env and start the app:
+## API
 
-```bash
-export LLM_PROVIDER=ollama
-export LLM_BASE_URL=http://localhost:11434
-export LLM_MODEL=llama3.2
-uvicorn app.main:app --reload
-```
+| Method | Path | Body |
+|--------|------|------|
+| GET | `/api/v1/health` | — |
+| POST | `/api/v1/documents` | `id`, `title`, `text` |
+| GET | `/api/v1/documents/{id}` | — |
+| POST | `/api/v1/ai/notary/summarize` | `text`, optional `document_id`, `language` |
+| POST | `/api/v1/ai/classify` | `text`, optional `candidate_labels` |
+| POST | `/api/v1/ai/ask` | `question`, `context` |
 
-**OpenAI-compatible (vLLM, LocalAI, or OpenAI):**
+Send `X-Tenant-ID` header (default: `default`). Import `postman/AI-Platform.postman_collection.json` for ready-made requests.
 
-```bash
-export LLM_PROVIDER=openai_compatible
-export LLM_BASE_URL=http://localhost:8000   # or https://api.openai.com/v1
-export LLM_MODEL=llama-3.2-3b
-# optional: export LLM_API_KEY=sk-...
-uvicorn app.main:app --reload
-```
-
-**Endpoints:**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/ai/notary/summarize` | Summarize notarial-style document (body: `text`, optional `document_id`, `language`) |
-| POST | `/api/v1/ai/classify` | Classify text into one of given labels (body: `text`, optional `candidate_labels`) |
-| POST | `/api/v1/ai/ask` | Answer a question given a context (body: `question`, `context`) |
-| GET  | `/api/v1/health` | Health check |
-| POST | `/api/v1/documents` | Create document (body: `id`, `title`, `text`) |
-| GET  | `/api/v1/documents/{id}` | Get document by id |
-
-If the LLM is unavailable, notary summarization and classify/ask return safe fallbacks. Add more flows in `app/services_ai_flows.py` and use Alembic when you move off SQLite.
-
-**Code style (Ruff, like Spotless):**
+## Dev
 
 ```bash
-# Check only (CI runs this)
-ruff check app tests
-ruff format --check app tests
-
-# Auto-fix and format (apply, run before commit)
-ruff check app tests --fix
-ruff format app tests
+pytest tests/ -v                    # run tests
+ruff check app tests --fix          # lint + fix
+ruff format app tests               # format
 ```

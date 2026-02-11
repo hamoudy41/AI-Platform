@@ -1,0 +1,1963 @@
+{
+  "info": {
+    "_postman_id": "bac27972-208e-4310-8d8c-2d8b639c5dff",
+    "name": "AI Platform Copy",
+    "description": "Multi-tenant AI platform: health, documents, notary summarize, classify, ask.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 5000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('environment');",
+                  "    pm.expect(jsonData).to.have.property('timestamp');",
+                  "});",
+                  "",
+                  "pm.test('Status is ok', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ok');",
+                  "});",
+                  "",
+                  "pm.test('Timestamp is valid ISO format', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(new Date(jsonData.timestamp).toString()).to.not.eql('Invalid Date');",
+                  "});"
+                ],
+                "id": "fbdf5aa7-7826-4cb3-9ecc-a0f51958863f"
+              }
+            }
+          ],
+          "id": "cdb0cb47-6842-4640-b2ef-9b74a3446b4d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            },
+            "description": "Returns status, environment, and timestamp."
+          },
+          "response": [
+            {
+              "id": "bb83403a-6d78-4713-8dc6-c86b265365f8",
+              "name": "200 - Healthy",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "health"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"healthy\",\n  \"environment\": \"development\",\n  \"timestamp\": \"2024-01-15T10:30:00.000Z\"\n}"
+            },
+            {
+              "id": "be143d61-1c7c-4eae-8226-bb68b65b2e85",
+              "name": "500 - Service Unavailable",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "health"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"unhealthy\",\n  \"environment\": \"development\",\n  \"timestamp\": \"2024-01-15T10:30:00.000Z\",\n  \"error\": \"Database connection failed\"\n}"
+            }
+          ]
+        }
+      ],
+      "id": "88c8e09e-e2b2-42a3-a602-02158b1153cd"
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Create document",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('doc_id', 'doc-' + Date.now());"
+                ],
+                "id": "c363fe5e-34a3-4e7c-a3fe-797176465e14"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 5000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('title');",
+                  "    pm.expect(jsonData).to.have.property('text');",
+                  "    pm.expect(jsonData).to.have.property('created_at');",
+                  "});",
+                  "",
+                  "pm.test('ID matches request', function () {",
+                  "    const requestBody = JSON.parse(pm.request.body.raw);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.eql(requestBody.id);",
+                  "});",
+                  "",
+                  "pm.test('Data types are correct', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.be.a('string');",
+                  "    pm.expect(jsonData.title).to.be.a('string');",
+                  "    pm.expect(jsonData.text).to.be.a('string');",
+                  "});"
+                ],
+                "id": "2a2d46bc-9b2f-41d0-990e-6a62a5fa8860"
+              }
+            }
+          ],
+          "id": "a0a38879-afd9-4d99-947f-32c042e56e7f",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{doc_id}}\",\n  \"title\": \"Sample contract\",\n  \"text\": \"This is the full document text.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/documents",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents"
+              ]
+            },
+            "description": "Create a document for the current tenant. Uses unique doc_id per run to avoid duplicate key errors."
+          },
+          "response": [
+            {
+              "id": "9f4b0109-7f68-4d9f-aa82-318f9358a516",
+              "name": "201 - Document Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"doc-1\",\n  \"title\": \"Sample contract\",\n  \"text\": \"This is the full document text.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"doc-1\",\n  \"title\": \"Sample contract\",\n  \"text\": \"This is the full document text.\",\n  \"tenant_id\": \"tenant-123\",\n  \"created_at\": \"2024-01-15T10:30:00.000Z\"\n}"
+            },
+            {
+              "id": "64fc4acc-57f8-43f9-8501-b3145758267a",
+              "name": "400 - Missing Required Fields",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"doc-1\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"title\", \"message\": \"title is required\" },\n    { \"field\": \"text\", \"message\": \"text is required\" }\n  ]\n}"
+            },
+            {
+              "id": "00171435-f4a7-431c-adc7-122f31df013e",
+              "name": "400 - Missing Tenant Header",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"doc-1\",\n  \"title\": \"Sample contract\",\n  \"text\": \"This is the full document text.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Missing required header\",\n  \"details\": \"X-Tenant-ID header is required\"\n}"
+            },
+            {
+              "id": "39b82700-8808-4682-8cf0-68e739a7a515",
+              "name": "500 - Internal Server Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"doc-1\",\n  \"title\": \"Sample contract\",\n  \"text\": \"This is the full document text.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Internal server error\",\n  \"message\": \"Failed to store document\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get document by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 5000ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('title');",
+                  "    pm.expect(jsonData).to.have.property('text');",
+                  "    pm.expect(jsonData).to.have.property('created_at');",
+                  "});",
+                  "",
+                  "pm.test('Data types are correct', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.be.a('string');",
+                  "    pm.expect(jsonData.title).to.be.a('string');",
+                  "    pm.expect(jsonData.text).to.be.a('string');",
+                  "});"
+                ],
+                "id": "77f1003b-450f-49c5-b0c2-d69e046269b6"
+              }
+            }
+          ],
+          "id": "627b89dc-62a2-452f-9ca2-20ac5115d5ea",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/documents/{{doc_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "documents",
+                "{{doc_id}}"
+              ]
+            },
+            "description": "Get a document by id. Uses doc_id from Create document (same run). Returns 404 if not found or wrong tenant."
+          },
+          "response": [
+            {
+              "id": "1eb96f81-1af6-4d84-a826-594b1e53b2a1",
+              "name": "200 - Document Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents/doc-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents",
+                    "doc-1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"doc-1\",\n  \"title\": \"Sample contract\",\n  \"text\": \"This is the full document text.\",\n  \"tenant_id\": \"tenant-123\",\n  \"created_at\": \"2024-01-15T10:30:00.000Z\"\n}"
+            },
+            {
+              "id": "13eb6eef-1e45-40ba-b81a-af9c9782e020",
+              "name": "404 - Document Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents/non-existent-doc",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents",
+                    "non-existent-doc"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Document not found\",\n  \"document_id\": \"non-existent-doc\"\n}"
+            },
+            {
+              "id": "d27ae3bf-3ae5-4ed7-adab-5122a8aaa553",
+              "name": "404 - Wrong Tenant",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "wrong-tenant",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents/doc-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents",
+                    "doc-1"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Document not found\",\n  \"document_id\": \"doc-1\"\n}"
+            },
+            {
+              "id": "3fd704b1-1af4-4bee-a74c-671e6247df2b",
+              "name": "400 - Missing Tenant Header",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/documents/doc-1",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "documents",
+                    "doc-1"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Missing required header\",\n  \"details\": \"X-Tenant-ID header is required\"\n}"
+            }
+          ]
+        }
+      ],
+      "id": "a033e9bb-7288-488e-a5cc-a3b34127098a"
+    },
+    {
+      "name": "AI – Notary",
+      "item": [
+        {
+          "name": "Summarize (inline text)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 10000ms (AI endpoint)', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('summary');",
+                  "    pm.expect(jsonData).to.have.property('source');",
+                  "});",
+                  "",
+                  "pm.test('Source is llm or fallback', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(['llm', 'fallback']).to.include(jsonData.source);",
+                  "});",
+                  "",
+                  "pm.test('Data types are correct', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.summary).to.be.an('object');",
+                  "    pm.expect(jsonData.summary).to.have.property('raw_summary');",
+                  "    pm.expect(jsonData.source).to.be.a('string');",
+                  "});"
+                ],
+                "id": "12258141-46f2-4d1f-9ac2-17a96f513d18"
+              }
+            }
+          ],
+          "id": "d6b16593-1366-4886-ab49-e7922d20c465",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Document text here to summarize.\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "notary",
+                "summarize"
+              ]
+            },
+            "description": "Summarize notarial-style document from inline text. language: nl | en."
+          },
+          "response": [
+            {
+              "id": "25e6d1b4-e918-412f-ac1b-3f6453e62b01",
+              "name": "200 - Summary (LLM)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"This notarial deed, executed on January 15, 2024, concerns the transfer of property located at 123 Main Street. The seller, John Smith, hereby transfers all rights and ownership to the buyer, Jane Doe, for the agreed sum of 250,000 EUR.\",\n  \"language\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"summary\": \"Property transfer deed dated January 15, 2024. John Smith sells property at 123 Main Street to Jane Doe for 250,000 EUR.\",\n  \"source\": \"llm\",\n  \"language\": \"en\",\n  \"processing_time_ms\": 1523\n}"
+            },
+            {
+              "id": "2dd174fb-4042-4bda-851e-c2649015310a",
+              "name": "200 - Summary (Fallback)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"This notarial deed concerns the transfer of property.\",\n  \"language\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"summary\": \"This notarial deed concerns the transfer of property.\",\n  \"source\": \"fallback\",\n  \"language\": \"en\",\n  \"processing_time_ms\": 45,\n  \"fallback_reason\": \"LLM service unavailable\"\n}"
+            },
+            {
+              "id": "4df1e98e-f013-407f-be4b-cb4ddc98bdaa",
+              "name": "400 - Missing Text",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"language\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"text\", \"message\": \"text or document_id is required\" }\n  ]\n}"
+            },
+            {
+              "id": "69d637fe-ce15-4242-af73-93df7bbf3e27",
+              "name": "400 - Invalid Language",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Document text here.\",\n  \"language\": \"fr\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"language\", \"message\": \"language must be 'en' or 'nl'\" }\n  ]\n}"
+            },
+            {
+              "id": "59657436-a314-4a9f-84ec-e355b796e1e3",
+              "name": "500 - Internal Server Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Document text here.\",\n  \"language\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Internal server error\",\n  \"message\": \"Failed to process summarization request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Summarize (by document_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 10000ms (AI endpoint)', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('summary');",
+                  "    pm.expect(jsonData).to.have.property('source');",
+                  "    pm.expect(jsonData).to.have.property('document_id');",
+                  "});",
+                  "",
+                  "pm.test('Source is llm or fallback', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(['llm', 'fallback']).to.include(jsonData.source);",
+                  "});",
+                  "",
+                  "pm.test('Document ID matches request', function () {",
+                  "    const requestBody = JSON.parse(pm.request.body.raw);",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.document_id).to.eql(requestBody.document_id);",
+                  "});",
+                  "",
+                  "pm.test('Data types are correct', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.summary).to.be.an('object');",
+                  "    pm.expect(jsonData.summary).to.have.property('raw_summary');",
+                  "    pm.expect(jsonData.source).to.be.a('string');",
+                  "});"
+                ],
+                "id": "ac20abff-39ab-486c-b0ce-29cbeab5f7b3"
+              }
+            }
+          ],
+          "id": "d0c81782-a33b-47c5-8913-6ad1b4deb0f7",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_id\": \"{{doc_id}}\",\n  \"text\": \"ignored when document_id is set\",\n  \"language\": \"nl\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "notary",
+                "summarize"
+              ]
+            },
+            "description": "Summarize using stored document text. Create the document first with Documents > Create document."
+          },
+          "response": [
+            {
+              "id": "0fc2d3ed-e956-458a-839d-66c6486742ec",
+              "name": "200 - Summary by Document ID (LLM)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_id\": \"doc-1\",\n  \"language\": \"nl\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"summary\": \"Dit is een samenvatting van het voorbeeldcontract.\",\n  \"source\": \"llm\",\n  \"language\": \"nl\",\n  \"document_id\": \"doc-1\",\n  \"processing_time_ms\": 1845\n}"
+            },
+            {
+              "id": "eefc2cb9-225c-4e69-9c1f-ffb5cc367d19",
+              "name": "200 - Summary by Document ID (Fallback)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_id\": \"doc-1\",\n  \"language\": \"nl\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"summary\": \"This is the full document text.\",\n  \"source\": \"fallback\",\n  \"language\": \"nl\",\n  \"document_id\": \"doc-1\",\n  \"processing_time_ms\": 32,\n  \"fallback_reason\": \"LLM service timeout\"\n}"
+            },
+            {
+              "id": "f20eabc9-0e71-4be6-8c4b-bcf6faca3b1c",
+              "name": "404 - Document Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_id\": \"non-existent-doc\",\n  \"language\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Document not found\",\n  \"document_id\": \"non-existent-doc\"\n}"
+            },
+            {
+              "id": "725ba7fe-ea9a-47d9-9e5b-427e25353d6a",
+              "name": "400 - Missing Tenant Header",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_id\": \"doc-1\",\n  \"language\": \"en\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/notary/summarize",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "notary",
+                    "summarize"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Missing required header\",\n  \"details\": \"X-Tenant-ID header is required\"\n}"
+            }
+          ]
+        }
+      ],
+      "id": "954aa2f5-11bc-4bb3-950f-791d31c33cf2"
+    },
+    {
+      "name": "AI – Classify",
+      "item": [
+        {
+          "name": "Classify text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 10000ms (AI endpoint)', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('label');",
+                  "    pm.expect(jsonData).to.have.property('confidence');",
+                  "    pm.expect(jsonData).to.have.property('model');",
+                  "    pm.expect(jsonData).to.have.property('source');",
+                  "});",
+                  "",
+                  "pm.test('Source is llm or fallback', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(['llm', 'fallback']).to.include(jsonData.source);",
+                  "});",
+                  "",
+                  "pm.test('Confidence is between 0 and 1', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.confidence).to.be.at.least(0);",
+                  "    pm.expect(jsonData.confidence).to.be.at.most(1);",
+                  "});",
+                  "",
+                  "pm.test('Label is one of candidate labels', function () {",
+                  "    const requestBody = JSON.parse(pm.request.body.raw);",
+                  "    const jsonData = pm.response.json();",
+                  "    const candidateLabels = requestBody.candidate_labels || ['contract', 'letter', 'invoice', 'report', 'other'];",
+                  "    pm.expect(candidateLabels).to.include(jsonData.label);",
+                  "});"
+                ],
+                "id": "cdd79add-3718-44ad-8b08-80e4b94cf551"
+              }
+            }
+          ],
+          "id": "aac9f768-799b-47d6-82dc-b1a50ad3a1a7",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"This is an invoice for 100 euros.\",\n  \"candidate_labels\": [\"invoice\", \"letter\", \"contract\", \"report\", \"other\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ai/classify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "classify"
+              ]
+            },
+            "description": "Classify text into one of the candidate labels. candidate_labels is optional (default: contract, letter, invoice, report, other)."
+          },
+          "response": [
+            {
+              "id": "858836ed-89f8-485d-96fd-8425d42119ca",
+              "name": "200 - Classification (LLM)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"This is an invoice for 100 euros.\",\n  \"candidate_labels\": [\"invoice\", \"letter\", \"contract\", \"report\", \"other\"]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/classify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "classify"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"label\": \"invoice\",\n  \"confidence\": 0.92,\n  \"source\": \"llm\",\n  \"scores\": {\n    \"invoice\": 0.92,\n    \"letter\": 0.03,\n    \"contract\": 0.02,\n    \"report\": 0.02,\n    \"other\": 0.01\n  },\n  \"processing_time_ms\": 876\n}"
+            },
+            {
+              "id": "00c8e834-0517-45e5-9367-a77aec644d91",
+              "name": "200 - Classification (Fallback)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"This is an invoice for 100 euros.\",\n  \"candidate_labels\": [\"invoice\", \"letter\", \"contract\", \"report\", \"other\"]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/classify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "classify"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"label\": \"other\",\n  \"confidence\": 0.2,\n  \"source\": \"fallback\",\n  \"scores\": {\n    \"invoice\": 0.2,\n    \"letter\": 0.2,\n    \"contract\": 0.2,\n    \"report\": 0.2,\n    \"other\": 0.2\n  },\n  \"processing_time_ms\": 15,\n  \"fallback_reason\": \"LLM service unavailable\"\n}"
+            },
+            {
+              "id": "74736ca9-8d01-4fb9-8ae9-8790907557c3",
+              "name": "200 - Classification with Default Labels",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Dear Sir/Madam, I am writing to inform you about...\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/classify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "classify"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"label\": \"letter\",\n  \"confidence\": 0.87,\n  \"source\": \"llm\",\n  \"scores\": {\n    \"contract\": 0.05,\n    \"letter\": 0.87,\n    \"invoice\": 0.02,\n    \"report\": 0.04,\n    \"other\": 0.02\n  },\n  \"processing_time_ms\": 923\n}"
+            },
+            {
+              "id": "d8984074-6518-4240-a617-71d0a615ad37",
+              "name": "400 - Missing Text",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"candidate_labels\": [\"invoice\", \"letter\"]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/classify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "classify"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"text\", \"message\": \"text is required\" }\n  ]\n}"
+            },
+            {
+              "id": "013ebd3e-1dbe-4d7f-b94d-ecd06dc58918",
+              "name": "400 - Empty Candidate Labels",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Some text to classify\",\n  \"candidate_labels\": []\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/classify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "classify"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"candidate_labels\", \"message\": \"candidate_labels must have at least one label\" }\n  ]\n}"
+            },
+            {
+              "id": "77cf70be-a263-4c76-9b24-3e58012c3b39",
+              "name": "500 - Internal Server Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Some text to classify\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/classify",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "classify"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Internal server error\",\n  \"message\": \"Failed to process classification request\"\n}"
+            }
+          ]
+        }
+      ],
+      "id": "fb69dea9-aaa3-4a5b-ae71-4be1e839fe50"
+    },
+    {
+      "name": "AI – Ask",
+      "item": [
+        {
+          "name": "Ask (Q&A from context)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 10000ms (AI endpoint)', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(10000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('answer');",
+                  "    pm.expect(jsonData).to.have.property('model');",
+                  "    pm.expect(jsonData).to.have.property('source');",
+                  "});",
+                  "",
+                  "pm.test('Source is llm or fallback', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(['llm', 'fallback']).to.include(jsonData.source);",
+                  "});",
+                  "",
+                  "pm.test('Data types are correct', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.answer).to.be.a('string');",
+                  "    pm.expect(jsonData.source).to.be.a('string');",
+                  "});"
+                ],
+                "id": "92c75729-54c3-402a-8cbf-66976dc4a4d0"
+              }
+            }
+          ],
+          "id": "e1e622e3-ff36-472b-a271-4306d70e2df9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"What is the total amount?\",\n  \"context\": \"The contract states the total amount is 50 EUR. Payment due in 30 days.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ai/ask",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "ask"
+              ]
+            },
+            "description": "Answer a question based only on the provided context."
+          },
+          "response": [
+            {
+              "id": "68c90efe-f9b0-4646-903c-75f387cb35d5",
+              "name": "200 - Answer (LLM)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is the total amount?\",\n  \"context\": \"The contract states the total amount is 50 EUR. Payment due in 30 days.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"answer\": \"The total amount is 50 EUR.\",\n  \"source\": \"llm\",\n  \"confidence\": 0.95,\n  \"processing_time_ms\": 1234\n}"
+            },
+            {
+              "id": "990cf7f2-2bae-4d5d-a481-fcc4951739c9",
+              "name": "200 - Answer (Fallback)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is the total amount?\",\n  \"context\": \"The contract states the total amount is 50 EUR. Payment due in 30 days.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"answer\": \"Unable to determine answer from context.\",\n  \"source\": \"fallback\",\n  \"confidence\": 0.0,\n  \"processing_time_ms\": 28,\n  \"fallback_reason\": \"LLM service unavailable\"\n}"
+            },
+            {
+              "id": "31ec7b2d-5d6d-4ec9-a199-045843351ad1",
+              "name": "200 - Answer Not Found in Context",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is the delivery date?\",\n  \"context\": \"The contract states the total amount is 50 EUR. Payment due in 30 days.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"answer\": \"The delivery date is not mentioned in the provided context.\",\n  \"source\": \"llm\",\n  \"confidence\": 0.12,\n  \"processing_time_ms\": 1102\n}"
+            },
+            {
+              "id": "41a5daeb-6749-473b-a9bd-02e72722794b",
+              "name": "400 - Missing Question",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"context\": \"The contract states the total amount is 50 EUR.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"question\", \"message\": \"question is required\" }\n  ]\n}"
+            },
+            {
+              "id": "496cc617-29e7-4a1e-96fc-9a178bdb0cd6",
+              "name": "400 - Missing Context",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is the total amount?\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Validation failed\",\n  \"details\": [\n    { \"field\": \"context\", \"message\": \"context is required\" }\n  ]\n}"
+            },
+            {
+              "id": "7a77443c-33ad-4b9e-8ea2-f272dced6dcc",
+              "name": "400 - Missing Tenant Header",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is the total amount?\",\n  \"context\": \"The contract states the total amount is 50 EUR.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Missing required header\",\n  \"details\": \"X-Tenant-ID header is required\"\n}"
+            },
+            {
+              "id": "1980b4e6-8968-4a71-8b47-10050ed59e8c",
+              "name": "500 - Internal Server Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-ID",
+                    "value": "{{tenant_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"question\": \"What is the total amount?\",\n  \"context\": \"The contract states the total amount is 50 EUR.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/ai/ask",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "ai",
+                    "ask"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": \"Internal server error\",\n  \"message\": \"Failed to process Q&A request\"\n}"
+            }
+          ]
+        }
+      ],
+      "id": "0d2d5585-098c-4e0d-b01e-e6eb3a015fa2"
+    }
+  ],
+  "variable": [
+    {
+      "id": "6648b846-f509-4df7-8cf7-fb1e599717f0",
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "id": "220a5042-3958-4b0b-85a7-e2fd9da9f414",
+      "key": "tenant_id",
+      "value": "tenant-123"
+    },
+    {
+      "id": "2bd46de6-904d-494c-a1f1-de9321cf1280",
+      "key": "doc_id",
+      "value": "doc-1"
+    }
+  ]
+}
