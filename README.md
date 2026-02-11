@@ -43,11 +43,13 @@ Headers: `X-Tenant-ID` (default: `default`), optional `X-API-Key`. Metrics: `/me
 
 ```bash
 cd api
-pytest tests/ -v                    # run tests
-alembic upgrade head                # apply migrations
-alembic revision -m "msg" --autogenerate  # new migration
-ruff check app tests --fix          # lint + fix
-ruff format app tests               # format
+pip install -e ".[dev]"
+pre-commit install                  # lint on commit (run once)
+pytest tests/ -v
+alembic upgrade head
+alembic revision -m "msg" --autogenerate
+ruff check app tests --fix
+ruff format app tests
 ```
 
 `api/` backend, `frontend/` React app, `k8s/` manifests. See `ARCHITECTURE.md`, `COMPLIANCE.md`, `frontend/README.md`.

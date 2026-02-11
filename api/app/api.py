@@ -96,7 +96,9 @@ def create_app() -> FastAPI:
         async def rate_limit_middleware(request: Request, call_next):
             if not request.url.path.startswith(f"{settings.api_v1_prefix}/"):
                 return await call_next(request)
-            tenant_id = request.headers.get(settings.tenant_header_name) or settings.default_tenant_id
+            tenant_id = (
+                request.headers.get(settings.tenant_header_name) or settings.default_tenant_id
+            )
             limit = getattr(settings, "rate_limit_per_minute", 120)
             if not await check_rate_limit(tenant_id, limit=limit, window_seconds=60):
                 return ORJSONResponse(

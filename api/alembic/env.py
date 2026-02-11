@@ -24,6 +24,7 @@ def _get_url() -> str:
         return url.replace("postgresql+asyncpg", "postgresql+psycopg", 1)
     return url
 
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -46,15 +47,16 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    from sqlalchemy import create_engine
 
-    url = config.get_main_option("sqlalchemy.url") if config.get_main_option("sqlalchemy.url") else _get_url()
+    url = (
+        config.get_main_option("sqlalchemy.url")
+        if config.get_main_option("sqlalchemy.url")
+        else _get_url()
+    )
     connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

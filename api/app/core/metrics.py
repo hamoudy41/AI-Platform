@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
-REQUEST_COUNT = Counter("ai_platform_requests_total", "Total requests", ["method", "path", "status"])
+REQUEST_COUNT = Counter(
+    "ai_platform_requests_total", "Total requests", ["method", "path", "status"]
+)
 REQUEST_LATENCY = Histogram(
     "ai_platform_request_duration_seconds",
     "Request latency",
