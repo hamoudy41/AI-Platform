@@ -32,6 +32,7 @@ React + TypeScript, Tailwind. See `frontend/README.md`.
 
 ## Deployment
 
-- Docker: multi-stage (Node → Python); single image serves API + static frontend.
-- Compose: backend, Postgres, Redis.
-- K8s: `kubectl apply -k k8s/`
+- **ai-platform-api**: FastAPI only. `api/Dockerfile`.
+- **ai-platform-ui**: nginx + SPA, proxies `/api` to API. `frontend/Dockerfile`.
+- Compose: api, ui, Postgres, Redis, Ollama.
+- K8s: `kubectl apply -k k8s/` (api + ui deployments)

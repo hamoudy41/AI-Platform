@@ -20,11 +20,12 @@ Configure `LLM_PROVIDER` and `LLM_BASE_URL` in `.env`. Optional `API_KEY` for `X
 ## Deploy
 
 ```bash
-docker compose up --build -d   # localhost:8000
+docker compose up --build -d
+# UI: http://localhost  |  API: http://localhost:8000
 kubectl apply -k k8s/
 ```
 
-Compose: backend + Postgres + Redis. Pull model: `docker compose run ollama ollama pull llama3.1:8b`. For kind: `docker compose build backend` then `kind load docker-image ai-platform`.
+Compose: api, ui, Postgres, Redis, Ollama. UI proxies `/api` to the API. Pull model: `docker compose run ollama ollama pull llama3.1:8b`. For kind: `kind load docker-image ai-platform-api` and `kind load docker-image ai-platform-ui`.
 
 ## API
 

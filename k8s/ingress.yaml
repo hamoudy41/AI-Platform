@@ -15,7 +15,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: ai-platform
+                name: ui
                 port:
                   number: 80
   # Optional: TLS

@@ -9,4 +9,4 @@ npm test
 npm run build
 ```
 
-`VITE_API_BASE` overrides API URL. For standalone Docker: `docker build -t ai-platform-frontend .` (main app image builds frontend inline).
+`VITE_API_BASE` overrides API URL. Standalone UI: `docker build -t ai-platform-ui .` (nginx serves SPA, proxies /api to the API service).

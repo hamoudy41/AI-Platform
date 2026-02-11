@@ -13,7 +13,6 @@ uvicorn app.main:app --reload
 ## Docker
 
 ```bash
-# From repo root; build frontend first
-docker build -t ai-platform-frontend -f ../frontend/Dockerfile ../frontend
-docker build -t ai-platform .
+cd api
+docker build -t ai-platform-api .
 ```

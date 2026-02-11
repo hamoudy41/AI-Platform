@@ -1,26 +1,27 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ai-platform
+  name: ai-platform-api
   labels:
-    app: ai-platform
+    app: ai-platform-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ai-platform
+      app: ai-platform-api
   template:
     metadata:
       labels:
-        app: ai-platform
+        app: ai-platform-api
     spec:
       initContainers:
         - name: wait-for-db
           image: postgres:16-alpine
           command: ["sh", "-c", "until pg_isready -h postgres -U postgres; do sleep 2; done"]
       containers:
-        - name: ai-platform
-          image: ghcr.io/hamoudy41/ai-platform:latest
+        - name: api
+          image: ghcr.io/hamoudy41/ai-platform-api:latest
           ports:
             - containerPort: 8000
           envFrom:
@@ -45,11 +46,51 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ai-platform
+  name: api
 spec:
   selector:
-    app: ai-platform
+    app: ai-platform-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-platform-ui
+  labels:
+    app: ai-platform-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-platform-ui
+  template:
+    metadata:
+      labels:
+        app: ai-platform-ui
+    spec:
+      containers:
+        - name: ui
+          image: ghcr.io/hamoudy41/ai-platform-ui:latest
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+spec:
+  selector:
+    app: ai-platform-ui
   ports:
     - port: 80
-      targetPort: 8000
+      targetPort: 80
   type: ClusterIP
