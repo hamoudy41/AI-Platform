@@ -97,6 +97,20 @@ describe('DocumentsTab', () => {
     })
   })
 
+  it('file load does not overwrite docId and docTitle when already set', async () => {
+    const user = userEvent.setup()
+    render(<DocumentsTab />)
+    await user.type(screen.getByPlaceholderText(/document id/i), 'custom-id')
+    await user.type(screen.getByPlaceholderText(/title/i), 'Custom Title')
+    const file = new File(['Content'], 'file.txt', { type: 'text/plain' })
+    await user.upload(screen.getByTestId('file-upload'), file)
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/text/i)).toHaveValue('Content')
+    })
+    expect(screen.getByPlaceholderText(/document id/i)).toHaveValue('custom-id')
+    expect(screen.getByPlaceholderText(/title/i)).toHaveValue('Custom Title')
+  })
+
   it('loads file into form and create saves document', async () => {
     const user = userEvent.setup()
     vi.mocked(api.createDocument).mockResolvedValue({

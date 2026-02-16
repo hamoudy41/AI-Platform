@@ -74,4 +74,21 @@ describe('ClassifyTab', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(/LLM error/)
     })
   })
+
+  it('displays fallback result with error styling when confidence is 0', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.classify).mockResolvedValue({
+      label: 'other',
+      confidence: 0,
+      model: 'fallback',
+      source: 'fallback',
+    })
+    render(<ClassifyTab />)
+    await user.type(screen.getByPlaceholderText(/text to classify/i), 'Unknown')
+    await user.click(screen.getByRole('button', { name: 'Classify' }))
+    await waitFor(() => {
+      expect(screen.getByText('other', { exact: true })).toBeInTheDocument()
+      expect(screen.getByText(/Fallback/)).toBeInTheDocument()
+    })
+  })
 })

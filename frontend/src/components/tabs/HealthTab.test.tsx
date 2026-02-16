@@ -48,4 +48,34 @@ describe('HealthTab', () => {
       expect(screen.getByText(/error/)).toBeInTheDocument()
     })
   })
+
+  it('displays Disconnected when db_ok is false', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.getHealth).mockResolvedValue({
+      environment: 'local',
+      timestamp: '2024-01-01',
+      db_ok: false,
+      llm_ok: true,
+    })
+    render(<HealthTab />)
+    await user.click(screen.getByRole('button', { name: /check health/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/Disconnected/)).toBeInTheDocument()
+    })
+  })
+
+  it('displays Not configured when llm_ok is false', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.getHealth).mockResolvedValue({
+      environment: 'local',
+      timestamp: '2024-01-01',
+      db_ok: true,
+      llm_ok: false,
+    })
+    render(<HealthTab />)
+    await user.click(screen.getByRole('button', { name: /check health/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/Not configured/)).toBeInTheDocument()
+    })
+  })
 })

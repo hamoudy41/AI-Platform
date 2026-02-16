@@ -72,4 +72,28 @@ describe('NotaryTab', () => {
       expect(screen.getByText(/Summarize failed/)).toBeInTheDocument()
     })
   })
+
+  it('displays parties involved and risks when present', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.notarySummarize).mockResolvedValue({
+      document_id: null,
+      summary: {
+        title: 'Deed',
+        key_points: ['Point 1'],
+        parties_involved: ['Buyer', 'Seller'],
+        risks_or_warnings: ['Tax implications'],
+        raw_summary: 'Summary',
+      },
+      source: 'llm',
+    })
+    render(<NotaryTab />)
+    await user.type(screen.getByPlaceholderText(/document text/i), 'Deed')
+    await user.click(screen.getByRole('button', { name: 'Summarize' }))
+    await waitFor(() => {
+      expect(screen.getByText(/Parties involved/)).toBeInTheDocument()
+      expect(screen.getByText(/Risks & warnings/)).toBeInTheDocument()
+      expect(screen.getByText(/Buyer/)).toBeInTheDocument()
+      expect(screen.getByText(/Tax implications/)).toBeInTheDocument()
+    })
+  })
 })
