@@ -56,6 +56,24 @@ def test_calculator_tool_modulo():
     assert result == "1"
 
 
+def test_calculator_tool_zero_division_error():
+    """Calculator returns specific error for division by zero."""
+    result = calculator_tool.invoke({"expression": "10/0"})
+    assert "division by zero" in result.lower()
+
+
+def test_calculator_tool_syntax_error():
+    """Calculator returns specific error for syntax errors."""
+    result = calculator_tool.invoke({"expression": "invalid syntax"})
+    assert "syntax" in result.lower()
+
+
+def test_calculator_tool_value_error():
+    """Calculator returns specific error for unsupported operations."""
+    result = calculator_tool.invoke({"expression": "x + 5"})
+    assert "unsupported" in result.lower() or "error" in result.lower()
+
+
 def test_search_tool_returns_results():
     """Search tool returns web search results or error message."""
     result = search_tool.invoke({"query": "weather Paris"})

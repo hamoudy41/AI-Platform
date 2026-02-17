@@ -63,5 +63,11 @@ def calculator_tool(expression: str) -> str:
     try:
         result = _safe_eval(expression.strip())
         return str(result)
+    except ZeroDivisionError as e:
+        return f"Error: Division by zero - {e}"
+    except SyntaxError as e:
+        return f"Error: Invalid syntax in expression - {e}"
+    except ValueError as e:
+        return f"Error: Unsupported operation - {e}"
     except Exception as e:
         return f"Error: {e}"
