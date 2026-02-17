@@ -14,9 +14,48 @@ env:
   UI_IMAGE: ghcr.io/hamoudy41/ai-platform-ui
 
 jobs:
+  backend-format:
+    name: Backend (auto-format)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Ruff format (auto-fix)
+        run: ruff format api/app api/tests
+
+      - name: Commit and push if formatted
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No formatting changes needed."
+          else
+            git commit -m "style: apply ruff format (auto)"
+            git push
+            echo "Formatting applied. CI will re-run."
+            exit 1
+          fi
+
   backend-lint-test:
     name: Backend (lint + test)
     runs-on: ubuntu-latest
+    needs: [backend-format]
+    if: always() && (needs.backend-format.result == 'success' || needs.backend-format.result == 'skipped') && !cancelled()
     steps:
       - uses: actions/checkout@v4
 
@@ -83,9 +122,50 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  frontend-format:
+    name: Frontend (auto-format)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: ESLint (auto-fix)
+        run: cd frontend && npx eslint . --fix
+
+      - name: Commit and push if formatted
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No formatting changes needed."
+          else
+            git commit -m "style: apply eslint --fix (auto)"
+            git push
+            echo "Formatting applied. CI will re-run."
+            exit 1
+          fi
+
   frontend-lint-test:
     name: Frontend (lint + test)
     runs-on: ubuntu-latest
+    needs: [frontend-format]
+    if: always() && (needs.frontend-format.result == 'success' || needs.frontend-format.result == 'skipped') && !cancelled()
     steps:
       - uses: actions/checkout@v4
 
