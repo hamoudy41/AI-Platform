@@ -37,7 +37,9 @@ jobs:
             echo "No formatting changes needed."
           else
             git commit -m "style: apply ruff format (auto)"
-            git push
+            git fetch origin ${{ github.base_ref }}
+            git rebase origin/${{ github.base_ref }}
+            git push --force-with-lease
             echo "Formatting applied. CI will re-run."
             exit 1
           fi
@@ -102,7 +104,9 @@ jobs:
             echo "No formatting changes needed."
           else
             git commit -m "style: apply eslint --fix (auto)"
-            git push
+            git fetch origin ${{ github.base_ref }}
+            git rebase origin/${{ github.base_ref }}
+            git push --force-with-lease
             echo "Formatting applied. CI will re-run."
             exit 1
           fi
