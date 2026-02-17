@@ -476,4 +476,83 @@ describe('api', () => {
     }
     expect(chunks).toEqual([{ token: 'Hello' }, { token: ' world' }, { done: true }])
   })
+
+  it('agentChatStream throws when response body is missing', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, { status: 200 })
+    )
+    const gen = agentChatStream('Hi')
+    await expect(gen.next()).rejects.toThrow('Response body is missing from server')
+  })
+
+  it('agentChatStream handles read errors gracefully', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.error(new Error('Network connection lost'))
+      },
+    })
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce(new Response(stream, { status: 200 }))
+    const gen = agentChatStream('Hi')
+    await expect(gen.next()).rejects.toThrow('Failed to read from stream')
+  })
+
+  it('agentChatStream skips invalid JSON chunks', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"token":"Valid"}\n\ndata: {invalid json}\n\ndata: {"done":true}\n\n'
+          )
+        )
+        controller.close()
+      },
+    })
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce(new Response(stream, { status: 200 }))
+    const chunks: Array<{ token?: string; done?: boolean }> = []
+    for await (const c of agentChatStream('Hi')) {
+      chunks.push(c)
+    }
+    expect(chunks).toEqual([{ token: 'Valid' }, { done: true }])
+  })
+
+  it('agentChatStream skips empty data chunks', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"token":"Hello"}\n\ndata: \n\ndata:   \n\ndata: {"done":true}\n\n'
+          )
+        )
+        controller.close()
+      },
+    })
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce(new Response(stream, { status: 200 }))
+    const chunks: Array<{ token?: string; done?: boolean }> = []
+    for await (const c of agentChatStream('Hi')) {
+      chunks.push(c)
+    }
+    expect(chunks).toEqual([{ token: 'Hello' }, { done: true }])
+  })
+
+  it('agentChatStream handles incomplete chunks across reads', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"to'))
+        controller.enqueue(new TextEncoder().encode('ken":"Split"}\n\n'))
+        controller.enqueue(new TextEncoder().encode('data: {"done":true}\n\n'))
+        controller.close()
+      },
+    })
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce(new Response(stream, { status: 200 }))
+    const chunks: Array<{ token?: string; done?: boolean }> = []
+    for await (const c of agentChatStream('Hi')) {
+      chunks.push(c)
+    }
+    expect(chunks).toEqual([{ token: 'Split' }, { done: true }])
+  })
 })
