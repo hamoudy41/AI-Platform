@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "AI Platform"
+    app_name: str = "AgentHub"
     environment: Literal["local", "dev", "prod"] = "local"
     api_v1_prefix: str = "/api/v1"
     default_tenant_id: str = "default"
