@@ -12,6 +12,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from app.core.logging import get_logger
+from app.security import sanitize_user_input
 
 from .tools import BASE_TOOLS, calculator_tool, create_document_lookup_tool, search_tool
 
@@ -233,6 +234,26 @@ async def run_agent(
     get_document_fn: Any,
 ) -> dict[str, Any]:
     """Run the agent and return the final response."""
+    # Sanitize user input for security
+    try:
+        message = sanitize_user_input(
+            message,
+            max_length=4000,
+            check_injection=True,
+            tenant_id=tenant_id,
+        )
+    except ValueError as e:
+        logger.warning(
+            "agent.input_validation_failed",
+            tenant_id=tenant_id,
+            error=str(e),
+        )
+        return {
+            "answer": "Input validation failed. Please check your input and try again.",
+            "tools_used": [],
+            "error": "input_validation_failed",
+        }
+    
     translated = _translate_math_intent(message)
     if translated:
         expr, intent = translated

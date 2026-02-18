@@ -18,6 +18,7 @@ from .schemas import (
     NotarySummarizeResponse,
     NotarySummary,
 )
+from .security import sanitize_user_input, sanitize_for_logging
 from .services_llm import LLMError, LLMNotConfiguredError, llm_client
 
 
@@ -44,6 +45,22 @@ async def run_notary_summarization_flow(
         document = result.scalar_one_or_none()
         if document:
             text = document.text
+    
+    # Sanitize input for security
+    try:
+        text = sanitize_user_input(
+            text,
+            max_length=50000,  # Reasonable limit for documents
+            check_injection=True,
+            tenant_id=tenant_id,
+        )
+    except ValueError as e:
+        logger.warning(
+            "notary.input_validation_failed",
+            tenant_id=tenant_id,
+            error=str(e),
+        )
+        raise AiFlowError(f"Input validation failed: {e}") from e
 
     prompt = (
         "You are an assistant for Dutch notarial offices. "
@@ -160,12 +177,29 @@ async def run_classify_flow(
 ) -> ClassifyResponse:
     if not payload.candidate_labels:
         raise AiFlowError("candidate_labels cannot be empty")
+    
+    # Sanitize user input
+    try:
+        text = sanitize_user_input(
+            payload.text,
+            max_length=10000,
+            check_injection=True,
+            tenant_id=tenant_id,
+        )
+    except ValueError as e:
+        logger.warning(
+            "classify.input_validation_failed",
+            tenant_id=tenant_id,
+            error=str(e),
+        )
+        raise AiFlowError(f"Input validation failed: {e}") from e
+    
     labels_str = ", ".join(payload.candidate_labels)
     prompt = (
         f"Classify the following text by document type. "
         f"Choose exactly one label from: {labels_str}. "
         "Reply with only the single label word, nothing else.\n\nText:\n"
-        f"{payload.text[:4000]}"
+        f"{text[:4000]}"
     )
     source = "llm"
     try:
@@ -244,10 +278,32 @@ async def run_ask_flow(
     db: AsyncSession,
     payload: AskRequest,
 ) -> AskResponse:
+    # Sanitize user inputs
+    try:
+        question = sanitize_user_input(
+            payload.question,
+            max_length=4000,
+            check_injection=True,
+            tenant_id=tenant_id,
+        )
+        context = sanitize_user_input(
+            payload.context,
+            max_length=20000,
+            check_injection=True,
+            tenant_id=tenant_id,
+        )
+    except ValueError as e:
+        logger.warning(
+            "ask.input_validation_failed",
+            tenant_id=tenant_id,
+            error=str(e),
+        )
+        raise AiFlowError(f"Input validation failed: {e}") from e
+
     prompt = (
         "Answer the question based only on the following context. "
         "If the context does not contain the answer, say so briefly.\n\n"
-        f"Context:\n{payload.context[:8000]}\n\nQuestion: {payload.question}"
+        f"Context:\n{context[:8000]}\n\nQuestion: {question}"
     )
     source = "llm"
     try:
