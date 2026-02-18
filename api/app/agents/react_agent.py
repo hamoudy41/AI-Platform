@@ -19,10 +19,8 @@ logger = get_logger(__name__)
 
 
 def _translate_math_intent(message: str) -> tuple[str, str] | None:
-    """Translate natural-language math (average, mean, sum, product) into (expression, intent). Returns None if no match."""
+    """Parse natural-language math (average, mean, sum, product) into (expression, intent)."""
     msg_lower = message.lower().strip()
-    # Extract numbers (integers, decimals, and US thousands format like 1,000)
-    # Use + for comma group so plain 1000 matches \d+ not \d{1,3} (which would give 100,0)
     numbers = re.findall(r"-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?", message)
     nums = [float(n.replace(",", "")) for n in numbers]
 
@@ -50,7 +48,6 @@ def _is_malformed(text: str) -> bool:
     return t.startswith("{") and '"parameters"' in t and '"name"' in t
 
 
-# Common words that often match unrelated search results; keep substantive terms for queries.
 _STOP_WORDS = frozenset(
     "the a an is are was were be been being of in to for on with at by from as "
     "what who how when where which why best good great top experience things thing "
@@ -59,12 +56,11 @@ _STOP_WORDS = frozenset(
 
 
 def _search_query_from_message(message: str) -> str:
-    """Extract a focused search query: strip question wrappers and remove generic words."""
+    """Derive a focused search query from the user message."""
     q = message.strip().rstrip("?.").strip()
     if not q:
         return message
     lower = q.lower()
-    # Strip common question starters (generic patterns)
     for prefix in (
         "what is the ",
         "what is ",
@@ -86,7 +82,6 @@ def _search_query_from_message(message: str) -> str:
             q = q[len(prefix) :].strip()
             lower = q.lower()
             break
-    # Drop stop words so substantive terms lead the query
     words = q.split()
     kept = [w for w in words if w.lower() not in _STOP_WORDS]
     q = " ".join(kept) if kept else q
@@ -238,7 +233,6 @@ async def run_agent(
     get_document_fn: Any,
 ) -> dict[str, Any]:
     """Run the agent and return the final response."""
-    # When we can translate math intent, compute directly—works even without LLM
     translated = _translate_math_intent(message)
     if translated:
         expr, intent = translated
@@ -256,7 +250,6 @@ async def run_agent(
             logger.warning(
                 "react_agent.math_intent_failed", error=str(e), expression=expr, intent=intent
             )
-            pass  # Fall through to agent
 
     graph = agent_graph(tenant_id, get_document_fn)
     if not graph:
@@ -278,14 +271,12 @@ async def run_agent(
     result = await graph.ainvoke(inputs)
     answer, tools_used = _extract_result(result)
 
-    # When model has no useful answer: search the web, summarize, and present
     if _is_malformed(answer) or not answer or answer == "No response.":
         summary = await _search_and_summarize(message)
         if summary:
             answer = summary
             tools_used = list(dict.fromkeys(tools_used + ["search_tool"]))
         else:
-            # Fallback: return raw search results
             query = _search_query_from_message(message)
             search_content = search_tool.invoke({"query": query})
             if (
@@ -313,7 +304,6 @@ async def run_agent_stream(
     get_document_fn: Any,
 ) -> AsyncIterator[str]:
     """Stream agent response tokens."""
-    # Math shortcut: compute directly—works even without LLM (matches run_agent behavior)
     translated = _translate_math_intent(message)
     if translated:
         expr, intent = translated
@@ -332,7 +322,6 @@ async def run_agent_stream(
             logger.warning(
                 "react_agent.math_intent_failed", error=str(e), expression=expr, intent=intent
             )
-            pass  # Fall through to agent
 
     graph = agent_graph(tenant_id, get_document_fn)
     if not graph:

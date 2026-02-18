@@ -1,8 +1,8 @@
 # AI Platform
 
-Multi-tenant FastAPI app. `X-Tenant-ID` for tenant context; Ollama or OpenAI-compatible LLM backends; SQLite or Postgres.
+Multi-tenant AI platform: FastAPI backend, React frontend. ReAct agent (calculator, search, document lookup), RAG, and AI flows (notary, classify, ask). Ollama or OpenAI-compatible LLM backends.
 
-## Setup
+## Quick Start
 
 ```bash
 # Backend
@@ -15,7 +15,20 @@ uvicorn app.main:app --reload
 cd frontend && npm install && npm run dev
 ```
 
-Configure `LLM_PROVIDER` and `LLM_BASE_URL` in `.env`. Optional `API_KEY` for `X-API-Key` auth. For better agent search: set `SEARCH_PROVIDER=tavily` and `TAVILY_API_KEY` (get key at [tavily.com](https://app.tavily.com/sign-in)).
+## Configuration
+
+| Variable | Description |
+|----------|-------------|
+| `LLM_PROVIDER` | `ollama` or `openai_compatible` |
+| `LLM_BASE_URL` | LLM endpoint (e.g. `http://localhost:11434`) |
+| `LLM_MODEL` | Model name |
+| `API_KEY` | Required in prod; `X-API-Key` header |
+| `DATABASE_URL` | SQLite or Postgres |
+| `REDIS_URL` | Rate limiting and cache |
+| `SEARCH_PROVIDER` | `duckduckgo` (default) or `tavily` |
+| `TAVILY_API_KEY` | For Tavily search |
+
+See `api/.env.example` for full options.
 
 ## Deploy
 

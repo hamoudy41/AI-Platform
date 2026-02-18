@@ -1,12 +1,12 @@
 # Frontend
 
-React + TypeScript, Tailwind. Health, documents, classify, notary, ask.
+React, TypeScript, Tailwind. Tabs: Health, Documents, RAG, Agents, Classify, Notary, Ask.
 
 ```bash
 npm install
-npm run dev       # localhost:5173
+npm run dev
 npm test
 npm run build
 ```
 
-`VITE_API_BASE` overrides API URL. Standalone UI: `docker build -t ai-platform-ui .` (nginx serves SPA, proxies /api to the API service).
+`VITE_API_BASE` overrides API URL. Docker: `docker build -t ai-platform-ui .`

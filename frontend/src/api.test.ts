@@ -481,7 +481,7 @@ describe('api', () => {
     const mockFetch = vi.mocked(fetch)
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }))
     const gen = agentChatStream('Hi')
-    await expect(gen.next()).rejects.toThrow(/Response body is null or undefined/)
+    await expect(gen.next()).rejects.toThrow(/Stream error: missing/)
   })
 
   it('agentChatStream throws when body does not have getReader method', async () => {
@@ -492,7 +492,7 @@ describe('api', () => {
     } as unknown as Response
     mockFetch.mockResolvedValueOnce(response)
     const gen = agentChatStream('Hi')
-    await expect(gen.next()).rejects.toThrow(/not a valid ReadableStream/)
+    await expect(gen.next()).rejects.toThrow(/invalid response body/)
   })
 
   it('agentChatStream throws when getReader fails', async () => {
@@ -505,7 +505,7 @@ describe('api', () => {
     const response = { ok: true, body: mockBody } as unknown as Response
     mockFetch.mockResolvedValueOnce(response)
     const gen = agentChatStream('Hi')
-    await expect(gen.next()).rejects.toThrow(/Failed to get stream reader: Reader is locked/)
+    await expect(gen.next()).rejects.toThrow(/Stream error: Reader is locked/)
   })
 
   it('agentChatStream handles read errors gracefully', async () => {
@@ -517,7 +517,7 @@ describe('api', () => {
     const mockFetch = vi.mocked(fetch)
     mockFetch.mockResolvedValueOnce(new Response(stream, { status: 200 }))
     const gen = agentChatStream('Hi')
-    await expect(gen.next()).rejects.toThrow(/Failed to read from stream/)
+    await expect(gen.next()).rejects.toThrow(/Stream error: Network connection lost/)
   })
 
   it('agentChatStream skips invalid JSON chunks', async () => {

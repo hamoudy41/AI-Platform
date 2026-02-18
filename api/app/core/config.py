@@ -41,10 +41,8 @@ class Settings(BaseSettings):
     cors_allowed_origins: str = "*"
     # Purge ai_call_audit records older than this many days. 0 = disabled.
     ai_audit_retention_days: int = 0
-    # RAG: embedding model. "mock" for tests (returns deterministic vectors).
     embedding_model: str = "mock"
     embedding_dimension: int = 384
-    # Search: "duckduckgo" (free, no key) or "tavily" (better quality, requires TAVILY_API_KEY).
     search_provider: Literal["duckduckgo", "tavily"] = "duckduckgo"
     tavily_api_key: Optional[str] = None
 

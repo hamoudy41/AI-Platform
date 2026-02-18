@@ -68,5 +68,5 @@ def _search_web(query: str, max_results: int = 5) -> str:
 
 @tool
 def search_tool(query: str) -> str:
-    """Search for information on the web. Use the most specific, distinctive terms from the user's question. Avoid single generic words."""
+    """Web search. Prefer specific terms; avoid generic words."""
     return _search_web(query)

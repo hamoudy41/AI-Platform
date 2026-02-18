@@ -65,10 +65,7 @@ from .agents import run_agent, run_agent_stream
 
 logger = get_logger(__name__)
 
-# Deterministic fallback for legacy documents with NULL created_at (avoids mutable timestamps).
 _LEGACY_CREATED_AT = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-# Document model column limits (String(64), String(255)).
 _MAX_DOCUMENT_ID_LEN = 64
 _MAX_DOCUMENT_TITLE_LEN = 255
 
@@ -79,11 +76,9 @@ def _is_duplicate_key_error(exc: BaseException) -> bool:
         return _msg_indicates_duplicate(f"{exc}")
     orig = getattr(exc, "orig", None)
     if orig is not None:
-        # PostgreSQL: sqlstate 23505 = unique_violation (psycopg, asyncpg)
         sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
         if sqlstate == "23505":
             return True
-        # asyncpg: UniqueViolationError (avoids coupling via try/import)
         if type(orig).__name__ == "UniqueViolationError":
             return True
         cause = getattr(orig, "__cause__", None)
