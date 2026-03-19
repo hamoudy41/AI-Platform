@@ -1,33 +1,30 @@
 # AgentHub
 
-**AgentHub** (also configurable as "AI Platform") is a multi-tenant, agentic document intelligence platform. It combines a ReAct agent with RAG, document management, and AI workflows into a single deployable stack.
+AgentHub is a self-hosted application for tenant-aware document ingestion, retrieval-augmented querying, prompt-driven workflow execution, and tool-using chat. The repository is implemented as a modular monolith: one FastAPI service owns HTTP delivery, request validation, workflow orchestration, LLM transport, retrieval, and agent execution, while a React/Vite frontend provides an operator-facing control surface over the exposed API.
 
 ---
 
-## What is this?
+## About
 
-AgentHub is a self-hostable backend and frontend for:
+At runtime, the platform is divided into a small number of concrete subsystems:
 
-- **Document management** — Create, upload, and store documents with tenant isolation.
-- **RAG (Retrieval-Augmented Generation)** — Index documents, embed chunks, and query them with semantic retrieval. Answers are grounded in your documents.
-- **ReAct agent** — A tool-using agent that can compute (calculator), search the web (DuckDuckGo or Tavily), and look up documents by ID. Handles natural-language math (e.g. "average of 1, 2, 5, 6") and falls back to web search when the LLM cannot answer.
-- **AI flows** — Notary-style summarization (structured output for legal/notarial docs), zero-shot text classification, and Q&A over provided context.
-- **Streaming** — All LLM responses stream via Server-Sent Events for low-latency UX.
+- **HTTP control plane** - `api/app/http/` assembles the FastAPI application, installs middleware, exposes versioned routers under `/api/v1`, and formats streaming responses as Server-Sent Events.
+- **Persistence layer** - SQLAlchemy models in `api/app/models.py` store source documents, retrieval chunks, and AI audit records in SQLite or PostgreSQL. Redis is optional and is used only for per-tenant rate limiting and short-lived document caching.
+- **LLM transport layer** - `api/app/llm/` provides Ollama and OpenAI-compatible adapters with timeout handling, retry policy, Prometheus instrumentation, and circuit-breaker protection. The agent runtime uses separate LangChain chat-model bindings for tool calling.
+- **Retrieval layer** - `api/app/rag/` chunks document text, computes embeddings, stores vectors as JSON, and performs in-process cosine-similarity ranking for top-k retrieval.
+- **Workflow layer** - `api/app/flows/` implements prompt-specialized execution paths for classification, grounded question answering, and notarial summarization, with audit persistence in `ai_call_audit`.
+- **Agent runtime** - `api/app/agents/` runs a LangGraph ReAct loop with calculator, web-search, and document-lookup tools. Responses can be returned as JSON or streamed token-by-token over SSE.
+- **Operator UI** - `frontend/` is a React 19 single-page control surface for exercising health checks, document ingestion, retrieval, workflow endpoints, and agent chat against a selected tenant and optional API key.
 
-It may serve as:
+The deployment model is intentionally simple: document indexing, retrieval, workflow execution, and agent orchestration all run in-process during the request lifecycle. There is no external task queue, vector database, or distributed agent scheduler yet, which keeps the stack easy to operate but means throughput and latency are bounded by the API process and the configured model and search backends.
 
-- A **document Q&A system** — Upload docs, index them, ask questions.
-- An **agent playground** — Chat with a ReAct agent that uses tools.
-- A **notary/legal summarization tool** — Summarize contracts and documents in a structured format.
-- A **classification API** — Zero-shot label assignment for text.
-- A **foundation for custom agents** — Extend tools, add flows, or integrate with your own LLM pipeline.
-
-**Tech stack:** FastAPI, React, LangGraph, LangChain, SQLite/PostgreSQL, Redis (optional), Ollama or OpenAI-compatible LLMs.
+**Core stack:** FastAPI, SQLAlchemy asyncio, Pydantic, LangGraph, LangChain, React 19, Vite 7, SQLite/PostgreSQL, optional Redis, and Ollama or OpenAI-compatible model endpoints.
 
 ---
 
 ## Table of Contents
 
+- [About](#about)
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [API Reference](#api-reference)
@@ -305,6 +302,5 @@ Frontend tooling targets Node `20.19+` or `22.12+`. The current Vite/Vitest stac
 ├── k8s/                    # Kubernetes manifests
 ├── postman/                # API collection
 ├── ARCHITECTURE.md         # Technical architecture
-├── QUALITY_ASSESSMENT.md   # Code quality, maintainability, performance review
 └── COMPLIANCE.md           # Data, security, audit
 ```
